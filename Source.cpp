@@ -48,9 +48,8 @@ int main() {
 	std::cout << "***********************************************************************************\n";
 	std::cout << "*                     Download Folder Sorter v1.0                                 *\n";
 	std::cout << "*    Press Esc key on your keyboard to stop this app running in the backgroung    *\n";
-	std::cout << "*      In 5 seconds this application will start execution in the background       *\n";
+	std::cout << "*                   Press f1 to run in the in the background                      *\n";
 	std::cout << "***********************************************************************************\n";
-	std::this_thread::sleep_for(5s);
 	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
 	std::thread keyboardMonitoringThread(monitorKeyboard);
@@ -122,7 +121,8 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		//std::cout << destination.string()<<"\n";
+		fs::rename(source, destination, err);
+		if (err) {}
 	}
 }
 fs::path getDestination(fs::path const& path) {
@@ -154,7 +154,7 @@ std::string getExactFolder(fs::path const& path) {
 	else if (pathContains({ "Rust", "rust" }, fileName))
 		return R"(C:\Users\HP\Desktop\my books\programming books\Rustlang)";
 	else
-		return R"(C:\Users\HP\Desktop\my books\programming books)";
+		return R"(C:\Users\HP\Desktop\my books)";
 }
 bool pathContains(std::vector<std::string> const& listOfStr, std::string const& searchString) {
 	for (auto const& token : listOfStr) {
