@@ -123,8 +123,7 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		if (path.filename().extension() == ".mp3")
-			std::this_thread::sleep_for(10s);
+		std::this_thread::sleep_for(4s);
 		fs::rename(source, destination, err);
 		if (err) {}
 	}
