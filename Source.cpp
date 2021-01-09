@@ -63,7 +63,7 @@ void monitorKeyboard() {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
-				if (key == VK_ESCAPE) {
+				if (key == VK_F11) {
 					if (showScreen == 1)
 						showScreen = 0;
 					else
