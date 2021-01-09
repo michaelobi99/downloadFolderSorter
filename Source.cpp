@@ -57,17 +57,19 @@ int main() {
 	workerThread.join();
 }
 void monitorKeyboard() {
-	auto showScreen{ 1 };
-	auto hideScreen{ 0 };
-	hide(hideScreen);
+	auto showScreen{ 0 };
+	hide(showScreen);
 	while (true) {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
-				if (key == VK_ESCAPE)
+				if (key == VK_ESCAPE) {
+					if (showScreen == 1)
+						showScreen = 0;
+					else
+						showScreen = 1;
 					hide(showScreen);
-				if (key == VK_F1)
-					hide(hideScreen);
+				}
 			}
 		}
 	}
@@ -121,6 +123,8 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
+		if (path.filename().extension() == ".mp3")
+			std::this_thread::sleep_for(10s);
 		fs::rename(source, destination, err);
 		if (err) {}
 	}
