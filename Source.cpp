@@ -53,42 +53,25 @@ int main() {
 	std::this_thread::sleep_for(5s);
 	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
-	while (true) {
-		std::thread keyboardMonitoringThread(monitorKeyboard);
-		while (true) {
-			std::cout << "\nPress...1> to go back to running in backgroud: ";
-			try {
-				auto num{ 0 };
-				std::cin >> num;
-				if (num == 1)
-					break;
-				else
-					continue;
-			}
-			catch (std::exception const&) {
-				std::cin.clear();
-				std::cin.ignore(1000, '\n');
-				std::cout << "ERROR: Invalid command\n";
-			}
-		}
-		keyboardMonitoringThread.join();
-	}
+	std::thread keyboardMonitoringThread(monitorKeyboard);
+	keyboardMonitoringThread.join();
 	workerThread.join();
 }
 void monitorKeyboard() {
-	hide(0);
+	auto showScreen{ 1 };
+	auto hideScreen{ 0 };
+	hide(hideScreen);
 	while (true) {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
 				if (key == VK_ESCAPE)
-					break;
+					hide(showScreen);
+				if (key == VK_F1)
+					hide(hideScreen);
 			}
 		}
-		if (key == VK_ESCAPE)
-			break;
 	}
-	hide(1);
 }
 void mainProcess() {
 	while (true) {
@@ -139,9 +122,8 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		std::cout << destination.string()<<"\n";
+		//std::cout << destination.string()<<"\n";
 	}
-	std::this_thread::sleep_for(300s);
 }
 fs::path getDestination(fs::path const& path) {
 	fs::path destination;
@@ -165,7 +147,7 @@ fs::path getDestination(fs::path const& path) {
 }
 std::string getExactFolder(fs::path const& path) {
 	auto fileName = path.filename().string();
-	if (pathContains({ "c++", "cplusplus", "Cplusplus", "cpp" }, fileName))
+	if (pathContains({ "c++", "C++", "cplusplus", "Cplusplus", "cpp", "Cpp"}, fileName))
 		return R"(C:\Users\HP\Desktop\my books\programming books\Cplusplus)";
 	else if (pathContains({ "Python", "python" }, fileName))
 		return R"(C:\Users\HP\Desktop\my books\programming books\Python)";
