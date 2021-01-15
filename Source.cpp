@@ -22,18 +22,15 @@ void hide(bool hide) {
 #include <thread>
 #include <string>
 #include <string_view>
-#include <condition_variable>
 #include <future>
 #include <map>
 #include <limits>
 #include <fstream>
-#include <regex>
+#include <mutex>
 
 namespace fs = std::filesystem;
 using namespace std::literals::chrono_literals;
-std::condition_variable condition;
 std::mutex mut;
-
 
 
 void mainProcess();
@@ -43,6 +40,8 @@ void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
 std::string getExactFolder(fs::path const&);
 bool pathContains(std::vector<std::string> const&, std::string const&);
+void deleteCRdownloadFiles();
+bool isOldFile(fs::path const&);
 
 int main() {
 	std::cout << "***********************************************************************************\n";
@@ -53,8 +52,10 @@ int main() {
 	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
 	std::thread keyboardMonitoringThread(monitorKeyboard);
+	std::thread deleteFIlesThatFailedToDownload(deleteCRdownloadFiles);
 	keyboardMonitoringThread.join();
 	workerThread.join();
+	deleteFIlesThatFailedToDownload.join();
 }
 void monitorKeyboard() {
 	auto showScreen{ 0 };
@@ -63,7 +64,7 @@ void monitorKeyboard() {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
-				if (key == VK_F11) {
+				if (key == VK_F7) {
 					if (showScreen == 1)
 						showScreen = 0;
 					else
@@ -124,7 +125,9 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
 		std::this_thread::sleep_for(4s);
+		mut.lock();
 		fs::rename(source, destination, err);
+		mut.unlock();
 		if (err) {}
 	}
 }
@@ -165,4 +168,50 @@ bool pathContains(std::vector<std::string> const& listOfStr, std::string const& 
 			return true;
 	}
 	return false;
+}
+void deleteCRdownloadFiles() {
+	std::string ex = R"(.crdownload)";
+	auto filter = [&ex](fs::path const& file) {
+		if (file.extension().string() == ex)
+			return true;
+		return false;
+	};
+	fs::path folder = R"(C:\Users\HP\Downloads)";
+	std::vector<fs::path> listOfPaths;
+	listOfPaths.reserve(5);
+	while (true) {
+		try {
+			if (fs::exists(folder) && fs::is_directory(folder)) {
+				for (auto const& file : fs::directory_iterator(folder, fs::directory_options::skip_permission_denied)) {
+					try {
+						if (filter(file) && isOldFile(file)) {
+							listOfPaths.emplace_back(file.path().parent_path() / file.path().filename());
+							if (listOfPaths.capacity() == listOfPaths.size())
+								listOfPaths.reserve(5);
+						}
+					}
+					catch (fs::filesystem_error const&) {}
+					catch (std::exception const&) {}
+				}
+			}
+		}
+		catch (fs::filesystem_error const&) {}
+		catch (std::exception const&) {}
+		if (std::size(listOfPaths) > 0) {
+			std::error_code err;
+			for (auto const& path : listOfPaths) {
+				auto success = fs::remove(path, err);
+			}
+		}
+		else
+			continue;
+	}
+}
+
+bool isOldFile(fs::path const& file) {
+	std::error_code err;
+	auto lwt = fs::last_write_time(file, err);
+	auto diff = std::filesystem::file_time_type::clock::now() - lwt;
+	auto timeInSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+	return timeInSeconds < 10800 ? false : true;
 }
