@@ -26,15 +26,13 @@ void hide(bool hide) {
 #include <map>
 #include <limits>
 #include <fstream>
-#include <mutex>
 
 namespace fs = std::filesystem;
 using namespace std::literals::chrono_literals;
-std::mutex mut;
 
 
 void mainProcess();
-void monitorKeyboard();
+//void monitorKeyboard();
 std::vector<fs::path> listDir();
 void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
@@ -51,20 +49,20 @@ int main() {
 	std::cout << "***********************************************************************************\n";
 	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
-	std::thread keyboardMonitoringThread(monitorKeyboard);
+	//std::thread keyboardMonitoringThread(monitorKeyboard);
 	std::thread deleteFIlesThatFailedToDownload(deleteCRdownloadFiles);
-	keyboardMonitoringThread.join();
+	//keyboardMonitoringThread.join();
 	workerThread.join();
 	deleteFIlesThatFailedToDownload.join();
 }
-void monitorKeyboard() {
+/*void monitorKeyboard() {
 	auto showScreen{ 0 };
 	hide(showScreen);
 	while (true) {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
-				if (key == VK_F7) {
+				if (key == VK_F11) {
 					if (showScreen == 1)
 						showScreen = 0;
 					else
@@ -74,7 +72,7 @@ void monitorKeyboard() {
 			}
 		}
 	}
-}
+}*/
 void mainProcess() {
 	while (true) {
 		std::future<std::vector<fs::path>> listOfPaths = std::async(listDir);
@@ -125,9 +123,7 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
 		std::this_thread::sleep_for(4s);
-		mut.lock();
 		fs::rename(source, destination, err);
-		mut.unlock();
 		if (err) {}
 	}
 }
