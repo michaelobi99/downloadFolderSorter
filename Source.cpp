@@ -32,7 +32,7 @@ using namespace std::literals::chrono_literals;
 
 
 void mainProcess();
-//void monitorKeyboard();
+void monitorKeyboard();
 std::vector<fs::path> listDir();
 void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
@@ -49,20 +49,20 @@ int main() {
 	std::cout << "***********************************************************************************\n";
 	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
-	//std::thread keyboardMonitoringThread(monitorKeyboard);
-	std::thread deleteFIlesThatFailedToDownload(deleteCRdownloadFiles);
-	//keyboardMonitoringThread.join();
+	std::thread keyboardMonitoringThread(monitorKeyboard);
+	std::thread deleteFilesThatFailedToDownload(deleteCRdownloadFiles);
+	keyboardMonitoringThread.join();
 	workerThread.join();
-	deleteFIlesThatFailedToDownload.join();
+	deleteFilesThatFailedToDownload.join();
 }
-/*void monitorKeyboard() {
+void monitorKeyboard() {
 	auto showScreen{ 0 };
 	hide(showScreen);
 	while (true) {
 		char key;
 		for (key = 8; key <= 222; ++key) {
 			if (GetAsyncKeyState(key) == -32767) {
-				if (key == VK_F11) {
+				if (key == VK_F12) {
 					if (showScreen == 1)
 						showScreen = 0;
 					else
@@ -72,7 +72,7 @@ int main() {
 			}
 		}
 	}
-}*/
+}
 void mainProcess() {
 	while (true) {
 		std::future<std::vector<fs::path>> listOfPaths = std::async(listDir);
@@ -81,16 +81,20 @@ void mainProcess() {
 }
 std::vector<fs::path> listDir() {
 	std::vector<std::string> fileExtensionsToLookFor{ ".pdf", ".mkv", ".mp4", ".srt", ".mp3", ".gif", ".png", ".jpg" };
-	auto filter = [&fileExtensionsToLookFor](fs::path const& file) {
+	auto toUppercase = [](std::string str) {
+		std::transform(std::begin(str), std::end(str), std::begin(str), ::toupper);
+		return str;
+	};
+	auto filter = [&fileExtensionsToLookFor, &toUppercase](fs::path const& file) {
 		for (auto const& extension : fileExtensionsToLookFor) {
-			if (file.extension().string() == extension)
+			if (file.extension().string() == extension || file.extension().string() == toUppercase(extension))
 				return true;
 		}
 		return false;
 	};
 	fs::path folder = R"(C:\Users\HP\Downloads)";
 	std::vector<fs::path> listOfPaths;
-	listOfPaths.reserve(100);
+	listOfPaths.reserve(10);
 	while (true) {
 		try {
 			if (fs::exists(folder) && fs::is_directory(folder)) {
@@ -99,7 +103,7 @@ std::vector<fs::path> listDir() {
 						if (fs::is_regular_file(file) && filter(file)) {
 							listOfPaths.emplace_back(file.path().parent_path() / file.path().filename());
 							if (listOfPaths.capacity() == listOfPaths.size())
-								listOfPaths.reserve(50);
+								listOfPaths.reserve(10);
 						}
 					}
 					catch (fs::filesystem_error const&) {}
@@ -111,14 +115,11 @@ std::vector<fs::path> listDir() {
 		catch (std::exception const&) {}
 		if (std::size(listOfPaths) > 0)
 			break;
-		else
-			continue;
 	}
 	return listOfPaths;
 }
 void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	std::error_code err;
-	
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
@@ -135,12 +136,16 @@ fs::path getDestination(fs::path const& path) {
 		{2, R"(C:\Users\HP\Music\music)"},
 		{3, R"(C:\Users\HP\Pictures)"}
 	};
+	auto toUppercase = [](std::string str) {
+		std::transform(std::begin(str), std::end(str), std::begin(str), ::toupper);
+		return str;
+	};
 	std::vector<std::vector<std::string>> fileExtensionsToLookFor{ {".pdf"}, {".mkv", ".mp4", ".srt"}, {".mp3"}, {".gif", ".png", ".jpg"} };
 	auto fileExtension = path.extension().string();
 	auto counter{ 0 };
 	for (auto const& row : fileExtensionsToLookFor) {
 		for (auto const& col : row) {
-			if (fileExtension == col) {
+			if (fileExtension == col || fileExtension == toUppercase(col)) {
 				return fs::path{ folderDestinations[counter] }.append(path.filename().string());
 			}
 		}
@@ -174,7 +179,7 @@ void deleteCRdownloadFiles() {
 	};
 	fs::path folder = R"(C:\Users\HP\Downloads)";
 	std::vector<fs::path> listOfPaths;
-	listOfPaths.reserve(5);
+	listOfPaths.reserve(3);
 	while (true) {
 		try {
 			if (fs::exists(folder) && fs::is_directory(folder)) {
@@ -183,7 +188,7 @@ void deleteCRdownloadFiles() {
 						if (filter(file) && isOldFile(file)) {
 							listOfPaths.emplace_back(file.path().parent_path() / file.path().filename());
 							if (listOfPaths.capacity() == listOfPaths.size())
-								listOfPaths.reserve(5);
+								listOfPaths.reserve(3);
 						}
 					}
 					catch (fs::filesystem_error const&) {}
@@ -198,9 +203,8 @@ void deleteCRdownloadFiles() {
 			for (auto const& path : listOfPaths) {
 				auto success = fs::remove(path, err);
 			}
+			listOfPaths.clear();
 		}
-		else
-			continue;
 	}
 }
 
@@ -209,5 +213,5 @@ bool isOldFile(fs::path const& file) {
 	auto lwt = fs::last_write_time(file, err);
 	auto diff = std::filesystem::file_time_type::clock::now() - lwt;
 	auto timeInSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff).count();
-	return timeInSeconds < 10800 ? false : true;
+	return timeInSeconds < 7200 ? false : true;
 }
