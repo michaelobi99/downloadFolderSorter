@@ -1,19 +1,8 @@
 //.........................................................................................................................
 //optional compilation..
 //this part of the code works only on windows
-#if defined _MSC_VER
 #include <Windows.h>
 #include <WinUser.h>
-void hide(bool hide) {
-	HWND stealth;
-	AllocConsole();
-	stealth = FindWindowA("ConsoleWindowClass", nullptr);
-	ShowWindow(stealth, hide);
-}
-#endif
-//end optional compilation
-//.........................................................................................................................
-
 #include <iostream>
 #include <chrono>
 #include <filesystem>
@@ -21,18 +10,19 @@ void hide(bool hide) {
 #include <algorithm>
 #include <thread>
 #include <string>
-#include <string_view>
 #include <future>
 #include <map>
-#include <limits>
-#include <fstream>
 
 namespace fs = std::filesystem;
 using namespace std::literals::chrono_literals;
-
-
+/*void hide(bool hide) {
+	HWND stealth;
+	AllocConsole();
+	stealth = FindWindowA("ConsoleWindowClass", nullptr);
+	ShowWindow(stealth, hide);
+}*/
 void mainProcess();
-void monitorKeyboard();
+//void monitorKeyboard();
 std::vector<fs::path> listDir();
 void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
@@ -47,15 +37,14 @@ int main() {
 	std::cout << "*    Press Esc key on your keyboard to stop this app running in the backgroung    *\n";
 	std::cout << "*                   Press f1 to run in the in the background                      *\n";
 	std::cout << "***********************************************************************************\n";
-	std::cin.exceptions(std::fstream::badbit | std::fstream::failbit);
 	std::thread workerThread(mainProcess);
-	std::thread keyboardMonitoringThread(monitorKeyboard);
+	//std::thread keyboardMonitoringThread(monitorKeyboard);
 	std::thread deleteFilesThatFailedToDownload(deleteCRdownloadFiles);
-	keyboardMonitoringThread.join();
+	//keyboardMonitoringThread.join();
+	deleteFilesThatFailedToDownload.detach();
 	workerThread.join();
-	deleteFilesThatFailedToDownload.join();
 }
-void monitorKeyboard() {
+/*void monitorKeyboard() {
 	auto showScreen{ 0 };
 	hide(showScreen);
 	while (true) {
@@ -72,7 +61,7 @@ void monitorKeyboard() {
 			}
 		}
 	}
-}
+}*/
 void mainProcess() {
 	while (true) {
 		std::future<std::vector<fs::path>> listOfPaths = std::async(listDir);
@@ -204,6 +193,7 @@ void deleteCRdownloadFiles() {
 				auto success = fs::remove(path, err);
 			}
 			listOfPaths.clear();
+			listOfPaths.reserve(3);
 		}
 	}
 }
