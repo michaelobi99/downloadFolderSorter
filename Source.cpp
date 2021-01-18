@@ -1,6 +1,3 @@
-//.........................................................................................................................
-//optional compilation..
-//this part of the code works only on windows
 #include <Windows.h>
 #include <WinUser.h>
 #include <iostream>
@@ -10,26 +7,22 @@
 #include <algorithm>
 #include <thread>
 #include <string>
-#include <future>
 #include <map>
 
 namespace fs = std::filesystem;
 using namespace std::literals::chrono_literals;
-/*void hide(bool hide) {
-	HWND stealth;
-	AllocConsole();
-	stealth = FindWindowA("ConsoleWindowClass", nullptr);
-	ShowWindow(stealth, hide);
-}*/
+
 void mainProcess();
-//void monitorKeyboard();
+void monitorKeyboard();
 std::vector<fs::path> listDir();
 void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
 std::string getExactFolder(fs::path const&);
 bool pathContains(std::vector<std::string> const&, std::string const&);
+bool pathContains1(std::vector<std::wstring> const&, std::wstring const&);
 void deleteCRdownloadFiles();
 bool isOldFile(fs::path const&);
+void hide(bool);
 
 int main() {
 	std::cout << "***********************************************************************************\n";
@@ -38,13 +31,14 @@ int main() {
 	std::cout << "*                   Press f1 to run in the in the background                      *\n";
 	std::cout << "***********************************************************************************\n";
 	std::thread workerThread(mainProcess);
-	//std::thread keyboardMonitoringThread(monitorKeyboard);
+	std::thread keyboardMonitoringThread(monitorKeyboard);
 	std::thread deleteFilesThatFailedToDownload(deleteCRdownloadFiles);
-	//keyboardMonitoringThread.join();
-	deleteFilesThatFailedToDownload.detach();
+	keyboardMonitoringThread.join();
+	deleteFilesThatFailedToDownload.join();
 	workerThread.join();
+	return 0;
 }
-/*void monitorKeyboard() {
+void monitorKeyboard() {
 	auto showScreen{ 0 };
 	hide(showScreen);
 	while (true) {
@@ -61,11 +55,20 @@ int main() {
 			}
 		}
 	}
-}*/
+}
+
+void hide(bool num) {
+	HWND stealth;
+	AllocConsole();
+	stealth = FindWindowA("ConsoleWindowClass", nullptr);
+	ShowWindow(stealth, num);
+}
+
 void mainProcess() {
 	while (true) {
-		std::future<std::vector<fs::path>> listOfPaths = std::async(listDir);
-		moveFilesToFolder(listOfPaths.get());
+		std::vector<fs::path> listOfPaths = listDir();
+		std::cout << "\n\n" << std::size(listOfPaths) << "\n\n";
+		moveFilesToFolder(listOfPaths);
 	}
 }
 std::vector<fs::path> listDir() {
@@ -112,9 +115,17 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		std::this_thread::sleep_for(4s);
-		fs::rename(source, destination, err);
-		if (err) {}
+		//std::this_thread::sleep_for(2s);
+		//fs::rename(source, destination, err);
+		//if (err) {}
+		std::cout << "destination: ";
+		try {
+			std::cout << destination.string()<<"\n";
+		}
+		catch(std::exception const&){
+			std::wcout << destination.wstring();
+			std::cout << "\n";
+		}
 	}
 }
 fs::path getDestination(fs::path const& path) {
@@ -135,22 +146,41 @@ fs::path getDestination(fs::path const& path) {
 	for (auto const& row : fileExtensionsToLookFor) {
 		for (auto const& col : row) {
 			if (fileExtension == col || fileExtension == toUppercase(col)) {
-				return fs::path{ folderDestinations[counter] }.append(path.filename().string());
+				try {
+					return fs::path{ folderDestinations[counter] }.append(path.filename().string());
+				}
+				catch (std::exception const&) {
+					return fs::path{ folderDestinations[counter] }.append(path.filename().wstring());
+				}
 			}
 		}
 		++counter;
 	}
 }
 std::string getExactFolder(fs::path const& path) {
-	auto fileName = path.filename().string();
-	if (pathContains({ "c++", "C++", "cplusplus", "Cplusplus", "cpp", "Cpp"}, fileName))
-		return R"(C:\Users\HP\Desktop\my books\programming books\Cplusplus)";
-	else if (pathContains({ "Python", "python" }, fileName))
-		return R"(C:\Users\HP\Desktop\my books\programming books\Python)";
-	else if (pathContains({ "Rust", "rust" }, fileName))
-		return R"(C:\Users\HP\Desktop\my books\programming books\Rustlang)";
-	else
-		return R"(C:\Users\HP\Desktop\my books)";
+	try {
+		auto fileName = path.filename().string();
+		if (pathContains({ "c++", "C++", "cplusplus", "Cplusplus", "cpp", "Cpp" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Cplusplus)";
+		else if (pathContains({ "Python", "python" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Python)";
+		else if (pathContains({ "Rust", "rust" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Rustlang)";
+		else
+			return R"(C:\Users\HP\Desktop\my books)";
+	}
+	catch (std::exception const&) {
+		std::wstring fileName = path.filename().wstring();
+		if (pathContains1({ L"c++", L"C++", L"cplusplus", L"Cplusplus", L"cpp", L"Cpp" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Cplusplus)";
+		else if (pathContains1({ L"Python", L"python" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Python)";
+		else if (pathContains1({ L"Rust", L"rust" }, fileName))
+			return R"(C:\Users\HP\Desktop\my books\programming books\Rustlang)";
+		else
+			return R"(C:\Users\HP\Desktop\my books)";
+	}
+	
 }
 bool pathContains(std::vector<std::string> const& listOfStr, std::string const& searchString) {
 	for (auto const& token : listOfStr) {
@@ -159,10 +189,20 @@ bool pathContains(std::vector<std::string> const& listOfStr, std::string const& 
 	}
 	return false;
 }
+bool pathContains1(std::vector<std::wstring> const& listOfStr, std::wstring const& searchString) {
+	for (auto const& token : listOfStr) {
+		if (auto iter = std::search(std::cbegin(searchString), std::cend(searchString), std::cbegin(token), std::cend(token)); iter != std::cend(searchString))
+			return true;
+	}
+	return false;
+}
 void deleteCRdownloadFiles() {
-	std::string ex = R"(.crdownload)";
-	auto filter = [&ex](fs::path const& file) {
-		if (file.extension().string() == ex)
+	using namespace std::literals::string_literals;
+	auto extensionToLookFor = R"(.crdownload)"s;
+	auto filter = [&extensionToLookFor](fs::path const& file) {
+		auto upper = extensionToLookFor;
+		std::transform(std::begin(upper), std::end(upper), std::begin(upper), ::toupper);
+		if (file.extension().string() == extensionToLookFor || file.extension().string() == upper)
 			return true;
 		return false;
 	};
