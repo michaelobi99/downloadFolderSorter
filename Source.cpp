@@ -30,6 +30,7 @@ int main() {
 	std::cout << "*    Press Esc key on your keyboard to stop this app running in the backgroung    *\n";
 	std::cout << "*                   Press f1 to run in the in the background                      *\n";
 	std::cout << "***********************************************************************************\n";
+	std::this_thread::sleep_for(3s);
 	std::thread workerThread(mainProcess);
 	std::thread keyboardMonitoringThread(monitorKeyboard);
 	std::thread deleteFilesThatFailedToDownload(deleteCRdownloadFiles);
@@ -115,17 +116,11 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		//std::this_thread::sleep_for(2s);
-		//fs::rename(source, destination, err);
-		//if (err) {}
+		std::this_thread::sleep_for(2s);
+		fs::rename(source, destination, err);
+		if (err) {}
 		std::cout << "destination: ";
-		try {
-			std::cout << destination.string()<<"\n";
-		}
-		catch(std::exception const&){
-			std::wcout << destination.wstring();
-			std::cout << "\n";
-		}
+		
 	}
 }
 fs::path getDestination(fs::path const& path) {
