@@ -18,11 +18,18 @@ std::vector<fs::path> listDir();
 void moveFilesToFolder(std::vector<fs::path> const&);
 fs::path getDestination(fs::path const&);
 std::string getExactFolder(fs::path const&);
-bool pathContains(std::vector<std::string> const&, std::string const&);
-bool pathContains1(std::vector<std::wstring> const&, std::wstring const&);
 void deleteCRdownloadFiles();
 bool isOldFile(fs::path const&);
 void hide(bool);
+
+template <typename Type>
+bool pathContains(std::vector<Type> const& listOfStr, Type const& searchString) {
+	for (auto const& token : listOfStr) {
+		if (auto iter = std::search(std::cbegin(searchString), std::cend(searchString), std::cbegin(token), std::cend(token)); iter != std::cend(searchString))
+			return true;
+	}
+	return false;
+}
 
 int main() {
 	std::cout << "***********************************************************************************\n";
@@ -68,7 +75,6 @@ void hide(bool num) {
 void mainProcess() {
 	while (true) {
 		std::vector<fs::path> listOfPaths = listDir();
-		std::cout << "\n\n" << std::size(listOfPaths) << "\n\n";
 		moveFilesToFolder(listOfPaths);
 	}
 }
@@ -119,7 +125,6 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 		std::this_thread::sleep_for(2s);
 		fs::rename(source, destination, err);
 		if (err) {}
-		std::cout << "destination: ";
 		
 	}
 }
@@ -166,31 +171,18 @@ std::string getExactFolder(fs::path const& path) {
 	}
 	catch (std::exception const&) {
 		std::wstring fileName = path.filename().wstring();
-		if (pathContains1({ L"c++", L"C++", L"cplusplus", L"Cplusplus", L"cpp", L"Cpp" }, fileName))
+		if (pathContains({ L"c++", L"C++", L"cplusplus", L"Cplusplus", L"cpp", L"Cpp" }, fileName))
 			return R"(C:\Users\HP\Desktop\my books\programming books\Cplusplus)";
-		else if (pathContains1({ L"Python", L"python" }, fileName))
+		else if (pathContains({ L"Python", L"python" }, fileName))
 			return R"(C:\Users\HP\Desktop\my books\programming books\Python)";
-		else if (pathContains1({ L"Rust", L"rust" }, fileName))
+		else if (pathContains({ L"Rust", L"rust" }, fileName))
 			return R"(C:\Users\HP\Desktop\my books\programming books\Rustlang)";
 		else
 			return R"(C:\Users\HP\Desktop\my books)";
 	}
 	
 }
-bool pathContains(std::vector<std::string> const& listOfStr, std::string const& searchString) {
-	for (auto const& token : listOfStr) {
-		if (auto iter = std::search(std::cbegin(searchString), std::cend(searchString), std::cbegin(token), std::cend(token)); iter != std::cend(searchString))
-			return true;
-	}
-	return false;
-}
-bool pathContains1(std::vector<std::wstring> const& listOfStr, std::wstring const& searchString) {
-	for (auto const& token : listOfStr) {
-		if (auto iter = std::search(std::cbegin(searchString), std::cend(searchString), std::cbegin(token), std::cend(token)); iter != std::cend(searchString))
-			return true;
-	}
-	return false;
-}
+
 void deleteCRdownloadFiles() {
 	using namespace std::literals::string_literals;
 	auto extensionToLookFor = R"(.crdownload)"s;
