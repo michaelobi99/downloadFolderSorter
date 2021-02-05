@@ -34,8 +34,7 @@ bool pathContains(std::vector<Type> const& listOfStr, Type const& searchString) 
 int main() {
 	std::cout << "***********************************************************************************\n";
 	std::cout << "*                     Download Folder Sorter v1.0                                 *\n";
-	std::cout << "*    Press Esc key on your keyboard to stop this app running in the backgroung    *\n";
-	std::cout << "*                   Press f1 to run in the in the background                      *\n";
+	std::cout << "*    Press F12 key on your keyboard to show this app running in the backgroung    *\n";
 	std::cout << "***********************************************************************************\n";
 	std::this_thread::sleep_for(3s);
 	std::thread workerThread(mainProcess);
@@ -122,10 +121,14 @@ void moveFilesToFolder(std::vector<fs::path> const& listOfPaths) {
 	for (const auto& path : listOfPaths) {
 		auto source = path;
 		auto destination = fs::path{ getDestination(path) };
-		std::this_thread::sleep_for(2s);
-		fs::rename(source, destination, err);
-		if (err) {}
-		
+		std::error_code err;
+		auto lwt = fs::last_write_time(source, err);
+		auto diff = std::filesystem::file_time_type::clock::now() - lwt;
+		auto timeInSeconds = std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+		if (timeInSeconds > 30) {
+			fs::rename(source, destination, err);
+			if (err) {}
+		}
 	}
 }
 fs::path getDestination(fs::path const& path) {
