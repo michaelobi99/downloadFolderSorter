@@ -9,6 +9,8 @@
 #include <string>
 #include <map>
 
+#define color 10
+
 namespace fs = std::filesystem;
 using namespace std::literals::chrono_literals;
 
@@ -32,10 +34,12 @@ bool pathContains(std::vector<Type> const& listOfStr, Type const& searchString) 
 }
 
 int main() {
-	std::cout << "***********************************************************************************\n";
-	std::cout << "*                     Download Folder Sorter v1.0                                 *\n";
-	std::cout << "*    Press F12 key on your keyboard to show this app running in the backgroung    *\n";
-	std::cout << "***********************************************************************************\n";
+	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(handle, color);
+	std::cout << "       ***********************************************************************************\n";
+	std::cout << "       *                     Download Folder Sorter v1.0                                 *\n";
+	std::cout << "       *    Press F12 key on your keyboard to show this app running in the background    *\n";
+	std::cout << "       ***********************************************************************************\n";
 	std::this_thread::sleep_for(3s);
 	std::thread workerThread(mainProcess);
 	std::thread keyboardMonitoringThread(monitorKeyboard);
